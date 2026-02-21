@@ -11,7 +11,7 @@ const expressApp = express()
 // Singleton: se reutiliza en invocaciones warm (reuso de conexión MongoDB)
 let initPromise: Promise<void> | null = null
 
-function init(): Promise<void> {
+async function init(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
       const app = await NestFactory.create(
@@ -48,12 +48,15 @@ export default async function handler(
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
     res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-admin-key')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-key')
     res.end()
     return
   }
 
+  // Asegurar que NestJS está inicializado
   await init()
+  
+  // Pasar la petición al adaptador de Express
   expressApp(req as any, res as any)
 }
