@@ -4,6 +4,7 @@ dotenv.config()
 import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
 import { AppModule } from './app.module'
+import { buildCorsOptions } from './cors.config'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
@@ -16,12 +17,7 @@ async function bootstrap() {
     }),
   )
 
-  app.enableCors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
-    maxAge: 86400,
-  })
+  app.enableCors(buildCorsOptions())
 
   const port = process.env.PORT || 3000
   await app.listen(port)

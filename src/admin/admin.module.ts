@@ -7,9 +7,11 @@ import { Voter, VoterSchema } from '../schemas/voter.schema'
 import { Candidate, CandidateSchema } from '../schemas/candidate.schema'
 import { Vote, VoteSchema } from '../schemas/vote.schema'
 import { ElectionConfig, ElectionConfigSchema } from '../schemas/election-config.schema'
+import { SecurityModule } from '../security/security.module'
 
 @Module({
   imports: [
+    SecurityModule,
     MongooseModule.forFeature([
       { name: Voter.name, schema: VoterSchema },
       { name: Candidate.name, schema: CandidateSchema },

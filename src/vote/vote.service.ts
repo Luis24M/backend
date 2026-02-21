@@ -46,23 +46,30 @@ export class VoteService {
       1,
     )
 
-    // Operación atómica: marcar como votado si aún no lo hizo
-    const updated = await this.voterModel.findOneAndUpdate(
-      {
-        _id: voter._id,
-        hasVotedArea: false,
-        isEnabled: true,
-      },
-      { $set: { hasVotedArea: true } },
-    )
+    const session = await this.voterModel.db.startSession()
+    try {
+      await session.withTransaction(async () => {
+        const updated = await this.voterModel.findOneAndUpdate(
+          {
+            _id: voter._id,
+            hasVotedArea: false,
+            isEnabled: true,
+          },
+          { $set: { hasVotedArea: true } },
+          { session },
+        )
 
-    if (!updated) {
-      throw new ForbiddenException(
-        'No puedes votar: ya registraste tu voto o no estás habilitado.',
-      )
+        if (!updated) {
+          throw new ForbiddenException(
+            'No puedes votar: ya registraste tu voto o no estás habilitado.',
+          )
+        }
+
+        await this.voteModel.create([voteEntry], { session })
+      })
+    } finally {
+      await session.endSession()
     }
-
-    await this.voteModel.create(voteEntry)
 
     return { message: 'Voto de área registrado correctamente.' }
   }
@@ -80,23 +87,31 @@ export class VoteService {
       1,
     )
 
-    const updated = await this.voterModel.findOneAndUpdate(
-      {
-        _id: voter._id,
-        hasVotedArea: true,
-        hasVotedPresidency: false,
-        isEnabled: true,
-      },
-      { $set: { hasVotedPresidency: true } },
-    )
+    const session = await this.voterModel.db.startSession()
+    try {
+      await session.withTransaction(async () => {
+        const updated = await this.voterModel.findOneAndUpdate(
+          {
+            _id: voter._id,
+            hasVotedArea: true,
+            hasVotedPresidency: false,
+            isEnabled: true,
+          },
+          { $set: { hasVotedPresidency: true } },
+          { session },
+        )
 
-    if (!updated) {
-      throw new ForbiddenException(
-        'No puedes votar: ya votaste en presidencia, no completaste la fase de áreas o no estás habilitado.',
-      )
+        if (!updated) {
+          throw new ForbiddenException(
+            'No puedes votar: ya votaste en presidencia, no completaste la fase de áreas o no estás habilitado.',
+          )
+        }
+
+        await this.voteModel.create([voteEntry], { session })
+      })
+    } finally {
+      await session.endSession()
     }
-
-    await this.voteModel.create(voteEntry)
 
     return { message: 'Voto de presidencia registrado correctamente.' }
   }
@@ -152,22 +167,30 @@ export class VoteService {
       ? { hasVotedPresidency: false, isEnabled: true }
       : { hasVotedArea: true, isEnabled: true }
 
-    const updated = await this.voterModel.findOneAndUpdate(
-      {
-        _id: voter._id,
-        votedRound2Positions: { $ne: dto.position },
-        ...voterCheck,
-      },
-      { $addToSet: { votedRound2Positions: dto.position } },
-    )
+    const session = await this.voterModel.db.startSession()
+    try {
+      await session.withTransaction(async () => {
+        const updated = await this.voterModel.findOneAndUpdate(
+          {
+            _id: voter._id,
+            votedRound2Positions: { $ne: dto.position },
+            ...voterCheck,
+          },
+          { $addToSet: { votedRound2Positions: dto.position } },
+          { session },
+        )
 
-    if (!updated) {
-      throw new ForbiddenException(
-        'Ya votaste en la segunda vuelta para este cargo o no tienes autorización.',
-      )
+        if (!updated) {
+          throw new ForbiddenException(
+            'Ya votaste en la segunda vuelta para este cargo o no tienes autorización.',
+          )
+        }
+
+        await this.voteModel.create([voteEntry], { session })
+      })
+    } finally {
+      await session.endSession()
     }
-
-    await this.voteModel.create(voteEntry)
 
     return { message: `Voto de segunda vuelta para ${dto.position} registrado.` }
   }

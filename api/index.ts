@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module'; 
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
+import { buildCorsOptions } from '../src/cors.config';
 
 const expressApp = express();
 let isAppInitialized = false; 
@@ -22,11 +23,7 @@ const bootstrap = async () => {
     new ExpressAdapter(expressApp)
   );
   
-  app.enableCors({
-    origin: '*', 
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
-  });
+  app.enableCors(buildCorsOptions());
 
   await app.init();
   isAppInitialized = true;
