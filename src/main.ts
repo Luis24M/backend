@@ -1,30 +1,40 @@
-import 'reflect-metadata'
-import * as dotenv from 'dotenv'
-dotenv.config()
-import { NestFactory } from '@nestjs/core'
-import { ValidationPipe } from '@nestjs/common'
-import { AppModule } from './app.module'
+import 'reflect-metadata';
+import * as dotenv from 'dotenv';
+dotenv.config();
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { AppModule } from './app.module'; 
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
+
+const expressApp = express();
+
+let cachedApp: any;
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  if (!cachedApp) {
+    cachedApp = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: false,
-    }),
-  )
+    cachedApp.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: false,
+      }),
+    );
 
-  app.enableCors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
-  })
+    cachedApp.enableCors({
+      origin: '*',
+      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+    });
 
-  const port = process.env.PORT || 3000
-  await app.listen(port)
-  console.log(`Backend running on http://localhost:${port}`)
+    await cachedApp.init(); 
+  }
+  return expressApp;
 }
 
-bootstrap()
+export default async function (req: any, res: any) {
+  const app = await bootstrap();
+  app(req, res);
+}
