@@ -1,4 +1,4 @@
-import { Injectable, TooManyRequestsException } from '@nestjs/common'
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 import { RateLimit, RateLimitDocument } from './rate-limit.schema'
@@ -48,7 +48,10 @@ export class RateLimitService {
       return
     }
 
-    throw new TooManyRequestsException('Demasiadas solicitudes. Intenta en unos segundos.')
+    throw new HttpException(
+      'Demasiadas solicitudes. Intenta en unos segundos.',
+      HttpStatus.TOO_MANY_REQUESTS,
+    )
   }
 
   private getClientIp(request: any): string {
