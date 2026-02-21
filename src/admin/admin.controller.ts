@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   Post,
   Patch,
   Delete,
@@ -28,6 +29,7 @@ export class AdminController {
   // ─── Elección ─────────────────────────────────────────────────────────────
 
   @Get('election')
+  @Header('Cache-Control', 'no-store')
   getElectionConfig() {
     return this.adminService.getElectionConfig()
   }
@@ -45,6 +47,7 @@ export class AdminController {
   // ─── Votantes ─────────────────────────────────────────────────────────────
 
   @Get('voters')
+  @Header('Cache-Control', 'no-store')
   getVoters() {
     return this.adminService.getVoters()
   }
@@ -84,6 +87,7 @@ export class AdminController {
   // ─── Candidatos ───────────────────────────────────────────────────────────
 
   @Get('candidates')
+  @Header('Cache-Control', 'no-store')
   getCandidates() {
     return this.adminService.getCandidates()
   }
@@ -109,11 +113,13 @@ export class AdminController {
   // ─── Resultados ───────────────────────────────────────────────────────────
 
   @Get('results')
+  @Header('Cache-Control', 'no-store')
   getResults() {
     return this.adminService.getResults()
   }
 
   @Get('results/:position')
+  @Header('Cache-Control', 'no-store')
   getPositionResults(@Param('position') position: Position) {
     return this.adminService.getPositionResults(position)
   }
