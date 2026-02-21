@@ -33,7 +33,10 @@ export class AdminService {
   // ─── Elección ─────────────────────────────────────────────────────────────
 
   async getElectionConfig() {
-    let config = await this.electionConfigModel.findOne()
+    let config = await this.electionConfigModel
+      .findOne()
+      .select('status currentRound positionStates runoffCandidates')
+      .lean()
     if (!config) {
       config = await this.electionConfigModel.create({
         status: ElectionStatus.WAITING,
@@ -95,6 +98,7 @@ export class AdminService {
       .find()
       .sort({ name: 1 })
       .select('-sessionToken -sessionTokenExpiry -__v')
+      .lean()
   }
 
   async createVoter(dto: CreateVoterDto) {
@@ -118,10 +122,24 @@ export class AdminService {
     const voter = await this.voterModel.findOneAndUpdate(
       { dni },
       { $set: dto },
-      { new: true },
+      { new: true, runValidators: true },
     )
+      .select('-sessionToken -sessionTokenExpiry -__v')
+      .lean()
     if (!voter) throw new NotFoundException(`Votante con DNI ${dni} no encontrado.`)
     return voter
+  }
+
+  async enableAllVoters() {
+    const result = await this.voterModel.updateMany(
+      { isEnabled: false },
+      { $set: { isEnabled: true } },
+    )
+
+    return {
+      enabled: result.modifiedCount,
+      message: 'Votantes habilitados correctamente.',
+    }
   }
 
   async importVoters(buffer: Buffer) {
@@ -205,6 +223,7 @@ export class AdminService {
       .find()
       .sort({ position: 1, presentationOrder: 1 })
       .select('-__v')
+      .lean()
   }
 
   async createCandidate(dto: CreateCandidateDto) {
@@ -234,50 +253,62 @@ export class AdminService {
     const results: Record<string, any> = {}
 
     // Estadísticas de participación
-    const totalPadron = await this.voterModel.countDocuments()
-    const totalEligible = await this.voterModel.countDocuments({
-      isEnabled: true,
-    })
-    const totalVotedAreas = await this.voterModel.countDocuments({
-      hasVotedArea: true,
-    })
-    const totalVotedPresidency = await this.voterModel.countDocuments({
-      hasVotedPresidency: true,
-    })
+    const [totalPadron, totalEligible, totalVotedAreas, totalVotedPresidency] =
+      await Promise.all([
+        this.voterModel.countDocuments(),
+        this.voterModel.countDocuments({ isEnabled: true }),
+        this.voterModel.countDocuments({ hasVotedArea: true }),
+        this.voterModel.countDocuments({ hasVotedPresidency: true }),
+      ])
 
     // UC-02: Quórum de presidencia — nulidad si votaron <= mitad del padrón
     const presidencyQuorumVoid = totalVotedPresidency <= Math.floor(totalPadron / 2)
 
-    for (const position of allPositions) {
-      const r1Votes = await this.voteModel.find({ position, round: 1 })
-      const r2Votes = await this.voteModel.find({ position, round: 2 })
+    const positionEntries = await Promise.all(
+      allPositions.map(async (position) => {
+        const [r1Votes, r2Votes, candidates] = await Promise.all([
+          this.voteModel
+            .find({ position, round: 1 })
+            .select('voteType candidateId')
+            .lean(),
+          this.voteModel
+            .find({ position, round: 2 })
+            .select('voteType candidateId')
+            .lean(),
+          this.candidateModel
+            .find({ position })
+            .select('name photoUrl isApproved')
+            .lean(),
+        ])
 
-      const candidates = await this.candidateModel
-        .find({ position })
-        .select('name photoUrl isApproved')
-        .lean()
+        const isPresidency = position === Position.PRESIDENCIA
+        const r1Result = this.computeRound(r1Votes, candidates, false)
+        const r2Result = r2Votes.length > 0
+          ? this.computeRound(r2Votes, candidates, true)
+          : null
 
-      const isPresidency = position === Position.PRESIDENCIA
-      const r1Result = this.computeRound(r1Votes, candidates, false)
-      const r2Result = r2Votes.length > 0
-        ? this.computeRound(r2Votes, candidates, true)
-        : null
-
-      results[position] = {
-        label: POSITION_LABELS[position],
-        candidates,
-        round1: r1Result,
-        round2: r2Result,
-        // UC-02: Solo aplica a presidencia y solo cuando hay votos
-        ...(isPresidency && totalVotedPresidency > 0 && {
-          quorumVoid: presidencyQuorumVoid,
-          quorumDetail: {
-            totalPadron,
-            votosEmitidos: totalVotedPresidency,
-            umbral: Math.floor(totalPadron / 2) + 1,
+        return [
+          position,
+          {
+            label: POSITION_LABELS[position],
+            candidates,
+            round1: r1Result,
+            round2: r2Result,
+            ...(isPresidency && totalVotedPresidency > 0 && {
+              quorumVoid: presidencyQuorumVoid,
+              quorumDetail: {
+                totalPadron,
+                votosEmitidos: totalVotedPresidency,
+                umbral: Math.floor(totalPadron / 2) + 1,
+              },
+            }),
           },
-        }),
-      }
+        ] as const
+      }),
+    )
+
+    for (const [position, data] of positionEntries) {
+      results[position] = data
     }
 
     return {
@@ -292,12 +323,20 @@ export class AdminService {
   }
 
   async getPositionResults(position: Position) {
-    const r1Votes = await this.voteModel.find({ position, round: 1 })
-    const r2Votes = await this.voteModel.find({ position, round: 2 })
-    const candidates = await this.candidateModel
-      .find({ position })
-      .select('name photoUrl')
-      .lean()
+    const [r1Votes, r2Votes, candidates] = await Promise.all([
+      this.voteModel
+        .find({ position, round: 1 })
+        .select('voteType candidateId')
+        .lean(),
+      this.voteModel
+        .find({ position, round: 2 })
+        .select('voteType candidateId')
+        .lean(),
+      this.candidateModel
+        .find({ position })
+        .select('name photoUrl')
+        .lean(),
+    ])
 
     return {
       position,
@@ -308,7 +347,11 @@ export class AdminService {
     }
   }
 
-  private computeRound(votes: VoteDocument[], candidates: any[], isSecondRound = false) {
+  private computeRound(
+    votes: Array<{ voteType: VoteType; candidateId: any }>,
+    candidates: any[],
+    isSecondRound = false,
+  ) {
     const total = votes.length
     if (total === 0) return {
       total: 0, blank: 0, null: 0, valid: 0, perCandidate: {},

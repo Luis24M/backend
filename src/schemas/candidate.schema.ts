@@ -64,3 +64,5 @@ export class Candidate {
 }
 
 export const CandidateSchema = SchemaFactory.createForClass(Candidate)
+
+CandidateSchema.index({ position: 1, isApproved: 1, presentationOrder: 1 })
