@@ -1,62 +1,30 @@
-import 'reflect-metadata'
-import { NestFactory } from '@nestjs/core'
-import { ExpressAdapter } from '@nestjs/platform-express'
-import { ValidationPipe } from '@nestjs/common'
-import * as express from 'express'
-import { AppModule } from '../src/app.module'
-import type { IncomingMessage, ServerResponse } from 'http'
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from '../src/app.module'; 
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
 
-const expressApp = express()
+const expressApp = express();
 
-// Singleton: se reutiliza en invocaciones warm (reuso de conexión MongoDB)
-let initPromise: Promise<void> | null = null
-
-async function init(): Promise<void> {
-  if (!initPromise) {
-    initPromise = (async () => {
-      const app = await NestFactory.create(
-        AppModule,
-        new ExpressAdapter(expressApp),
-        { logger: ['error', 'warn'] },
-      )
-
-      app.useGlobalPipes(
-        new ValidationPipe({
-          whitelist: true,
-          transform: true,
-          forbidNonWhitelisted: false,
-        }),
-      )
-
-      app.enableCors({
-        origin: '*',
-        methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
-      })
-
-      await app.init()
-    })()
-  }
-  return initPromise
-}
-
-export default async function handler(
-  req: IncomingMessage,
-  res: ServerResponse,
-) {
-  // Manejo manual de preflight (CORS) para Vercel
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 204
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-key')
-    res.end()
-    return
-  }
-
-  // Asegurar que NestJS está inicializado
-  await init()
+const bootstrap = async () => {
+  const app = await NestFactory.create(
+    AppModule, 
+    new ExpressAdapter(expressApp)
+  );
   
-  // Pasar la petición al adaptador de Express
-  expressApp(req as any, res as any)
+  app.enableCors({
+    origin: '*', 
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+  });
+
+  await app.init();
+};
+
+bootstrap();
+
+export default async function (req: any, res: any) {
+    if (!expressApp.listeners('request').length) {
+        await bootstrap();
+    }
+    expressApp(req, res);
 }
