@@ -44,6 +44,16 @@ export default async function handler(
   req: IncomingMessage,
   res: ServerResponse,
 ) {
+  // Manejo manual de preflight (CORS) para Vercel
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-admin-key')
+    res.end()
+    return
+  }
+
   await init()
   expressApp(req as any, res as any)
 }
