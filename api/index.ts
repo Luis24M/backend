@@ -4,6 +4,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 
 const expressApp = express();
+let isAppInitialized = false; 
 
 const bootstrap = async () => {
   const app = await NestFactory.create(
@@ -18,13 +19,15 @@ const bootstrap = async () => {
   });
 
   await app.init();
+  isAppInitialized = true;
 };
 
 bootstrap();
 
 export default async function (req: any, res: any) {
-    if (!expressApp.listeners('request').length) {
-        await bootstrap();
-    }
-    expressApp(req, res);
+    if (!isAppInitialized) {
+    console.log('Iniciando NestJS (Cold Start)...');
+    await bootstrap();
+  }
+  expressApp(req, res);
 }

@@ -20,11 +20,18 @@ async function bootstrap() {
     origin: '*',
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+    maxAge: 86400,
+  })
+
+  // health check simple
+  app.getHttpAdapter().get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' })
   })
 
   const port = process.env.PORT || 3000
   await app.listen(port)
   console.log(`Backend running on http://localhost:${port}`)
 }
+
 
 bootstrap()

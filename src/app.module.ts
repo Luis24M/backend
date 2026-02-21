@@ -10,8 +10,9 @@ import { AdminModule } from './admin/admin.module'
     MongooseModule.forRoot(
       process.env.MONGODB_URI || 'mongodb://localhost:27017/votaciones',
       {
-        // Importante para serverless: no bufferar queries cuando la conexión está caída
+        serverSelectionTimeoutMS: 5000,
         bufferCommands: false,
+        maxPoolSize: 2,
       },
     ),
     AuthModule,

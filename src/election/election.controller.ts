@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common'
+import { Controller, Get, Header, Param, UseGuards } from '@nestjs/common'
 import { ElectionService } from './election.service'
 import { VoterGuard } from '../auth/voter.guard'
 import { Position } from '../schemas/candidate.schema'
@@ -9,6 +9,7 @@ export class ElectionController {
   constructor(private readonly electionService: ElectionService) {}
 
   @Get('status')
+  @Header('Cache-Control', 'max-age=0, s-maxage=5, stale-while-revalidate=10')
   getStatus() {
     return this.electionService.getStatus()
   }
