@@ -49,5 +49,5 @@ export class Voter {
 
 export const VoterSchema = SchemaFactory.createForClass(Voter)
 
-// Índice para búsqueda rápida de token
-VoterSchema.index({ sessionToken: 1 })
+// Índice compuesto para validar sesión activa (token + expiración)
+VoterSchema.index({ sessionToken: 1, sessionTokenExpiry: 1 })

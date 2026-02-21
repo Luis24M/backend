@@ -27,6 +27,9 @@ export class VoterGuard implements CanActivate {
       sessionToken: token,
       sessionTokenExpiry: { $gt: new Date() },
     })
+      .select(
+        '_id dni name area isEnabled hasVotedArea hasVotedPresidency votedRound2Positions sessionTokenExpiry',
+      )
 
     if (!voter) {
       throw new UnauthorizedException('Sesión inválida o expirada. Vuelve a ingresar.')

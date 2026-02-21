@@ -5,8 +5,18 @@ import express from 'express';
 
 const expressApp = express();
 let isAppInitialized = false; 
+let bootstrapPromise: Promise<void> | null = null;
 
 const bootstrap = async () => {
+  if (isAppInitialized) {
+    return;
+  }
+
+  if (bootstrapPromise) {
+    return bootstrapPromise;
+  }
+
+  bootstrapPromise = (async () => {
   const app = await NestFactory.create(
     AppModule, 
     new ExpressAdapter(expressApp)
@@ -20,14 +30,15 @@ const bootstrap = async () => {
 
   await app.init();
   isAppInitialized = true;
+  })();
+
+  return bootstrapPromise;
 };
 
-bootstrap();
-
 export default async function (req: any, res: any) {
-    if (!isAppInitialized) {
+  if (!isAppInitialized) {
     console.log('Iniciando NestJS (Cold Start)...');
     await bootstrap();
   }
-  expressApp(req, res);
+  return expressApp(req, res);
 }

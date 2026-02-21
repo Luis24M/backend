@@ -20,7 +20,10 @@ export class ElectionService {
   ) {}
 
   async getStatus() {
-    let config = await this.electionConfigModel.findOne()
+    let config = await this.electionConfigModel
+      .findOne()
+      .select('status currentRound positionStates')
+      .lean()
     if (!config) {
       // Crear config inicial si no existe
       config = await this.electionConfigModel.create({
@@ -39,6 +42,7 @@ export class ElectionService {
       .find({ position, isApproved: true })
       .sort({ presentationOrder: 1 })
       .select('-__v')
+      .lean()
   }
 
   async getAllApprovedCandidates() {
@@ -46,6 +50,7 @@ export class ElectionService {
       .find({ isApproved: true })
       .sort({ position: 1, presentationOrder: 1 })
       .select('-__v')
+      .lean()
   }
 
   /**
@@ -53,7 +58,10 @@ export class ElectionService {
    * Solo aplica cuando positionStates[position] === RUNOFF.
    */
   async getRunoffCandidates(position: Position) {
-    const config = await this.electionConfigModel.findOne()
+    const config = await this.electionConfigModel
+      .findOne()
+      .select('positionStates runoffCandidates')
+      .lean()
     if (
       !config ||
       config.positionStates[position] !== PositionStatus.RUNOFF
@@ -62,6 +70,9 @@ export class ElectionService {
     }
 
     const ids = config.runoffCandidates[position] || []
-    return this.candidateModel.find({ _id: { $in: ids } }).select('-__v')
+    return this.candidateModel
+      .find({ _id: { $in: ids } })
+      .select('-__v')
+      .lean()
   }
 }
