@@ -30,18 +30,16 @@ const VoterSchema = new Schema({
   area:                  { type: String, required: true, enum: ['PMO', 'GTH', 'MKT', 'LTK_FNZ', 'TI'] },
   isEnabled:             { type: Boolean, default: false },
   hasVotedArea:          { type: Boolean, default: false },
-  hasVotedPresidency:    { type: Boolean, default: false },
   votedRound2Positions:  { type: [String], default: [] },
   sessionToken:          { type: String },
   sessionTokenExpiry:    { type: Date },
 })
 
 const CandidateSchema = new Schema({
-  name:              { type: String, required: true },
-  photoUrl:          { type: String, default: '' },
-  position:          { type: String, required: true },
-  isApproved:        { type: Boolean, default: false },
-  presentationOrder: { type: Number, default: 0 },
+  name:       { type: String, required: true },
+  photoUrl:   { type: String, default: '' },
+  position:   { type: String, required: true },
+  isApproved: { type: Boolean, default: false },
 })
 
 const ElectionConfigSchema = new Schema({
@@ -71,23 +69,23 @@ const VOTERS = [
 
 const CANDIDATES = [
   // PMO
-  { name: 'Roberto Silva Navarro',   position: 'PMO',        presentationOrder: 1, isApproved: true },
-  { name: 'Patricia Luna Herrera',   position: 'PMO',        presentationOrder: 2, isApproved: true },
+  { name: 'Roberto Silva Navarro',   position: 'PMO',         isApproved: true },
+  { name: 'Patricia Luna Herrera',   position: 'PMO',         isApproved: true },
   // GTH
-  { name: 'Eduardo Ríos Campos',     position: 'GTH',        presentationOrder: 1, isApproved: true },
-  { name: 'Claudia Vega Torres',     position: 'GTH',        presentationOrder: 2, isApproved: true },
+  { name: 'Eduardo Ríos Campos',     position: 'GTH',         isApproved: true },
+  { name: 'Claudia Vega Torres',     position: 'GTH',         isApproved: true },
   // MKT
-  { name: 'Diego Fuentes Paredes',   position: 'MKT',        presentationOrder: 1, isApproved: true },
-  { name: 'Valeria Mora Sánchez',    position: 'MKT',        presentationOrder: 2, isApproved: true },
+  { name: 'Diego Fuentes Paredes',   position: 'MKT',         isApproved: true },
+  { name: 'Valeria Mora Sánchez',    position: 'MKT',         isApproved: true },
   // LTK_FNZ
-  { name: 'Andrés Chávez Rojas',     position: 'LTK_FNZ',   presentationOrder: 1, isApproved: true },
-  { name: 'Daniela Ortiz Vargas',    position: 'LTK_FNZ',   presentationOrder: 2, isApproved: true },
+  { name: 'Andrés Chávez Rojas',     position: 'LTK_FNZ',    isApproved: true },
+  { name: 'Daniela Ortiz Vargas',    position: 'LTK_FNZ',    isApproved: true },
   // TI
-  { name: 'Miguel Ángel Soto Díaz',  position: 'TI',         presentationOrder: 1, isApproved: true },
-  { name: 'Fernanda Quispe León',    position: 'TI',         presentationOrder: 2, isApproved: true },
+  { name: 'Miguel Ángel Soto Díaz',  position: 'TI',          isApproved: true },
+  { name: 'Fernanda Quispe León',    position: 'TI',          isApproved: true },
   // PRESIDENCIA
-  { name: 'Alejandro Mendoza Cruz',  position: 'PRESIDENCIA', presentationOrder: 1, isApproved: true },
-  { name: 'Isabella Vargas Pinto',   position: 'PRESIDENCIA', presentationOrder: 2, isApproved: true },
+  { name: 'Alejandro Mendoza Cruz',  position: 'PRESIDENCIA', isApproved: true },
+  { name: 'Isabella Vargas Pinto',   position: 'PRESIDENCIA', isApproved: true },
 ]
 
 // ─── Main ────────────────────────────────────────────────────────────────────

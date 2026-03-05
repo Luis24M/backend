@@ -4,8 +4,7 @@ import { Position } from './candidate.schema'
 
 export enum ElectionStatus {
   WAITING = 'WAITING',
-  AREAS_OPEN = 'AREAS_OPEN',
-  PRESI_OPEN = 'PRESI_OPEN',
+  OPEN = 'OPEN',
   CLOSED = 'CLOSED',
 }
 

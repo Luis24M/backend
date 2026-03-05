@@ -40,7 +40,7 @@ export class ElectionService {
   async getCandidates(position: Position) {
     return this.candidateModel
       .find({ position, isApproved: true })
-      .sort({ presentationOrder: 1 })
+      .sort({ name: 1 })
       .select('-__v')
       .lean()
   }
@@ -48,7 +48,7 @@ export class ElectionService {
   async getAllApprovedCandidates() {
     return this.candidateModel
       .find({ isApproved: true })
-      .sort({ position: 1, presentationOrder: 1 })
+      .sort({ position: 1, name: 1 })
       .select('-__v')
       .lean()
   }

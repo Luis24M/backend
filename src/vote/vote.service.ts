@@ -13,9 +13,8 @@ import {
   ElectionStatus,
   PositionStatus,
 } from '../schemas/election-config.schema'
-import { Candidate, CandidateDocument, AREA_POSITIONS, Position } from '../schemas/candidate.schema'
-import { SubmitAreasDto } from './dto/submit-areas.dto'
-import { SubmitPresidencyDto } from './dto/submit-presidency.dto'
+import { Candidate, CandidateDocument, Position } from '../schemas/candidate.schema'
+import { SubmitBallotDto } from './dto/submit-ballot.dto'
 import { SubmitRunoffDto } from './dto/submit-runoff.dto'
 
 @Injectable()
@@ -29,20 +28,21 @@ export class VoteService {
     private candidateModel: Model<CandidateDocument>,
   ) {}
 
-  // ─── Áreas (Fase 1, round 1) ──────────────────────────────────────────────
+  // ─── Boleta unificada (área + presidencia simultáneos) ────────────────────
 
-  async submitAreas(voter: VoterDocument, dto: SubmitAreasDto) {
+  async submitBallot(voter: VoterDocument, dto: SubmitBallotDto) {
     const config = await this.electionConfigModel.findOne()
-    if (!config || config.status !== ElectionStatus.AREAS_OPEN) {
-      throw new ForbiddenException('La votación de áreas no está habilitada.')
+    if (!config || config.status !== ElectionStatus.OPEN) {
+      throw new ForbiddenException('La votación no está habilitada.')
     }
 
-    // El área se deduce del votante — un solo voto para su área
-    const position = voter.area as Position
+    const areaPosition = voter.area as Position
 
-    // Validar candidato
-    const [voteEntry] = await this.resolveVoteEntries(
-      { [position]: dto.candidateId },
+    const voteEntries = await this.resolveVoteEntries(
+      {
+        [areaPosition]: dto.areaCandidateId,
+        [Position.PRESIDENCIA]: dto.presidencyCandidateId,
+      },
       1,
     )
 
@@ -65,63 +65,21 @@ export class VoteService {
           )
         }
 
-        await this.voteModel.create([voteEntry], { session })
+        await this.voteModel.create(voteEntries, { session })
       })
     } finally {
       await session.endSession()
     }
 
-    return { message: 'Voto de área registrado correctamente.' }
-  }
-
-  // ─── Presidencia (Fase 2) ─────────────────────────────────────────────────
-
-  async submitPresidency(voter: VoterDocument, dto: SubmitPresidencyDto) {
-    const config = await this.electionConfigModel.findOne()
-    if (!config || config.status !== ElectionStatus.PRESI_OPEN) {
-      throw new ForbiddenException('La votación de presidencia no está habilitada.')
-    }
-
-    const [voteEntry] = await this.resolveVoteEntries(
-      { [Position.PRESIDENCIA]: dto.candidateId },
-      1,
-    )
-
-    const session = await this.voterModel.db.startSession()
-    try {
-      await session.withTransaction(async () => {
-        const updated = await this.voterModel.findOneAndUpdate(
-          {
-            _id: voter._id,
-            hasVotedArea: true,
-            hasVotedPresidency: false,
-            isEnabled: true,
-          },
-          { $set: { hasVotedPresidency: true } },
-          { session },
-        )
-
-        if (!updated) {
-          throw new ForbiddenException(
-            'No puedes votar: ya votaste en presidencia, no completaste la fase de áreas o no estás habilitado.',
-          )
-        }
-
-        await this.voteModel.create([voteEntry], { session })
-      })
-    } finally {
-      await session.endSession()
-    }
-
-    return { message: 'Voto de presidencia registrado correctamente.' }
+    return { message: 'Voto registrado correctamente.' }
   }
 
   // ─── Segunda vuelta / Balotaje (round 2) ─────────────────────────────────
 
   async submitRunoff(voter: VoterDocument, dto: SubmitRunoffDto) {
     const config = await this.electionConfigModel.findOne()
-    if (!config) {
-      throw new ForbiddenException('Configuración de elección no encontrada.')
+    if (!config || config.status !== ElectionStatus.OPEN) {
+      throw new ForbiddenException('La votación no está habilitada.')
     }
 
     const posState = config.positionStates?.[dto.position]
@@ -131,19 +89,19 @@ export class VoteService {
       )
     }
 
-    // En balotaje de presidencia el estado general debe ser PRESI_OPEN
     const isPresidency = dto.position === Position.PRESIDENCIA
-    if (isPresidency && config.status !== ElectionStatus.PRESI_OPEN) {
-      throw new ForbiddenException('La votación de presidencia no está habilitada.')
-    }
-    if (!isPresidency && config.status !== ElectionStatus.AREAS_OPEN) {
-      throw new ForbiddenException('La votación de áreas no está habilitada.')
-    }
 
-    // UC-01 Regla #4: Segmentación estricta — solo puede votar runoff de su propia área
+    // Solo puede votar runoff de su propia área
     if (!isPresidency && voter.area !== dto.position) {
       throw new ForbiddenException(
         `No puedes votar en la segunda vuelta de ${dto.position}. Tu área es ${voter.area}.`,
+      )
+    }
+
+    // El votante debe haber completado la boleta de primera vuelta
+    if (!voter.hasVotedArea) {
+      throw new ForbiddenException(
+        'Debes haber emitido tu voto en primera vuelta para participar en el balotaje.',
       )
     }
 
@@ -162,19 +120,15 @@ export class VoteService {
       2,
     )
 
-    // Atómico: agregar posición a votedRound2Positions si no estaba
-    const voterCheck = isPresidency
-      ? { hasVotedPresidency: false, isEnabled: true }
-      : { hasVotedArea: true, isEnabled: true }
-
     const session = await this.voterModel.db.startSession()
     try {
       await session.withTransaction(async () => {
         const updated = await this.voterModel.findOneAndUpdate(
           {
             _id: voter._id,
+            hasVotedArea: true,
+            isEnabled: true,
             votedRound2Positions: { $ne: dto.position },
-            ...voterCheck,
           },
           { $addToSet: { votedRound2Positions: dto.position } },
           { session },
@@ -219,7 +173,6 @@ export class VoteService {
           round,
         })
       } else {
-        // Validar que el candidato existe y es para este cargo
         if (!Types.ObjectId.isValid(value)) {
           throw new BadRequestException(
             `ID de candidato inválido para ${position}.`,

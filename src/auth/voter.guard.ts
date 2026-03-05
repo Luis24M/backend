@@ -28,7 +28,7 @@ export class VoterGuard implements CanActivate {
       sessionTokenExpiry: { $gt: new Date() },
     })
       .select(
-        '_id dni name area isEnabled hasVotedArea hasVotedPresidency votedRound2Positions sessionTokenExpiry',
+        '_id dni name area isEnabled hasVotedArea votedRound2Positions sessionTokenExpiry',
       )
 
     if (!voter) {

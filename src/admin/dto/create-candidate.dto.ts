@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsIn, IsOptional, IsBoolean, IsNumber } from 'class-validator'
+import { IsString, IsNotEmpty, IsIn, IsOptional, IsBoolean } from 'class-validator'
 import { Position } from '../../schemas/candidate.schema'
 
 export class CreateCandidateDto {
@@ -17,8 +17,4 @@ export class CreateCandidateDto {
   @IsOptional()
   @IsBoolean()
   isApproved?: boolean
-
-  @IsOptional()
-  @IsNumber()
-  presentationOrder?: number
 }

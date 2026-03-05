@@ -57,12 +57,8 @@ export class Candidate {
   /** Aprobado por el Comité Electoral (Art. 07) */
   @Prop({ default: false })
   isApproved: boolean
-
-  /** Orden de sustentación (determinado por sorteo, Art. 20) */
-  @Prop({ default: 0 })
-  presentationOrder: number
 }
 
 export const CandidateSchema = SchemaFactory.createForClass(Candidate)
 
-CandidateSchema.index({ position: 1, isApproved: 1, presentationOrder: 1 })
+CandidateSchema.index({ position: 1, isApproved: 1 })

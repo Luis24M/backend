@@ -3,8 +3,7 @@ import { VoteService } from './vote.service'
 import { VoterGuard } from '../auth/voter.guard'
 import { CurrentVoter } from '../auth/voter.decorator'
 import { VoterDocument } from '../schemas/voter.schema'
-import { SubmitAreasDto } from './dto/submit-areas.dto'
-import { SubmitPresidencyDto } from './dto/submit-presidency.dto'
+import { SubmitBallotDto } from './dto/submit-ballot.dto'
 import { SubmitRunoffDto } from './dto/submit-runoff.dto'
 
 @Controller('vote')
@@ -12,22 +11,13 @@ import { SubmitRunoffDto } from './dto/submit-runoff.dto'
 export class VoteController {
   constructor(private readonly voteService: VoteService) {}
 
-  /** Fase 1: votar los 5 cargos directivos en una sola boleta */
-  @Post('areas')
-  submitAreas(
+  /** Boleta unificada: vota área directiva + presidencia en una sola petición */
+  @Post('ballot')
+  submitBallot(
     @CurrentVoter() voter: VoterDocument,
-    @Body() dto: SubmitAreasDto,
+    @Body() dto: SubmitBallotDto,
   ) {
-    return this.voteService.submitAreas(voter, dto)
-  }
-
-  /** Fase 2: votar presidencia */
-  @Post('presidency')
-  submitPresidency(
-    @CurrentVoter() voter: VoterDocument,
-    @Body() dto: SubmitPresidencyDto,
-  ) {
-    return this.voteService.submitPresidency(voter, dto)
+    return this.voteService.submitBallot(voter, dto)
   }
 
   /** Balotaje (segunda vuelta) para cualquier cargo */

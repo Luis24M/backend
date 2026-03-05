@@ -7,6 +7,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -73,9 +74,12 @@ export class AdminController {
       limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máximo
     }),
   )
-  importVoters(@UploadedFile() file: Express.Multer.File) {
+  importVoters(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('overwrite') overwrite?: string,
+  ) {
     if (!file) throw new BadRequestException('Se requiere un archivo Excel.')
-    return this.adminService.importVoters(file.buffer)
+    return this.adminService.importVoters(file.buffer, overwrite === 'true')
   }
 
   /** Resetear votos (solo para pruebas / contingencia) */

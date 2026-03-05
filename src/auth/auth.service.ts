@@ -38,7 +38,6 @@ export class AuthService {
         name: voter.name,
         area: voter.area,
         hasVotedArea: voter.hasVotedArea,
-        hasVotedPresidency: voter.hasVotedPresidency,
         votedRound2Positions: voter.votedRound2Positions,
       },
     }
@@ -50,7 +49,6 @@ export class AuthService {
       name: voter.name,
       area: voter.area,
       hasVotedArea: voter.hasVotedArea,
-      hasVotedPresidency: voter.hasVotedPresidency,
       votedRound2Positions: voter.votedRound2Positions,
     }
   }

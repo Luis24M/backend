@@ -113,7 +113,6 @@ export class AdminService {
       email: dto.email ?? '',
       isEnabled: false,
       hasVotedArea: false,
-      hasVotedPresidency: false,
       votedRound2Positions: [],
     })
   }
@@ -142,7 +141,7 @@ export class AdminService {
     }
   }
 
-  async importVoters(buffer: Buffer) {
+  async importVoters(buffer: Buffer, overwrite = false) {
     let workbook: XLSX.WorkBook
     try {
       workbook = XLSX.read(buffer, { type: 'buffer' })
@@ -154,19 +153,20 @@ export class AdminService {
     const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 })
 
     // Saltar fila de encabezado, filtrar filas vacías
+    // Formato: A = N°, B = Área, C = Nombre, D = Apellidos, E = DNI
     const voters = rows
       .slice(1)
-      .filter((row) => row[0] && row[1])
+      .filter((row) => row[1] && row[2] && row[4])
       .map((row) => ({
-        dni: String(row[0]).trim(),
-        name: String(row[1]).trim(),
-        email: row[2] ? String(row[2]).trim() : '',
-        area: row[3] ? String(row[3]).trim() : '',
+        dni: String(row[4]).trim(),
+        name: `${String(row[2]).trim()} ${String(row[3] || '').trim()}`.trim(),
+        email: '',
+        area: String(row[1]).trim(),
       }))
 
     if (voters.length === 0) {
       throw new BadRequestException(
-        'El archivo no contiene datos. Formato esperado: A = DNI, B = Nombre, C = Email, D = Área.',
+        'El archivo no contiene datos. Formato esperado: A = N°, B = Área, C = Nombre, D = Apellidos, E = DNI.',
       )
     }
 
@@ -187,13 +187,16 @@ export class AdminService {
           $setOnInsert: {
             isEnabled: false,
             hasVotedArea: false,
-            hasVotedPresidency: false,
             votedRound2Positions: [],
           },
         },
         upsert: true,
       },
     }))
+
+    if (overwrite) {
+      await this.voterModel.deleteMany({})
+    }
 
     await this.voterModel.bulkWrite(ops)
     return { imported: voters.length }
@@ -205,7 +208,6 @@ export class AdminService {
       {
         $set: {
           hasVotedArea: false,
-          hasVotedPresidency: false,
           votedRound2Positions: [],
           sessionToken: null,
           sessionTokenExpiry: null,
@@ -221,7 +223,7 @@ export class AdminService {
   async getCandidates() {
     return this.candidateModel
       .find()
-      .sort({ position: 1, presentationOrder: 1 })
+      .sort({ position: 1, name: 1 })
       .select('-__v')
       .lean()
   }
@@ -252,17 +254,16 @@ export class AdminService {
     const allPositions = [...AREA_POSITIONS, Position.PRESIDENCIA]
     const results: Record<string, any> = {}
 
-    // Estadísticas de participación
-    const [totalPadron, totalEligible, totalVotedAreas, totalVotedPresidency] =
+    // Estadísticas de participación (boleta unificada: hasVotedArea cubre área + presidencia)
+    const [totalPadron, totalEligible, totalVoted] =
       await Promise.all([
         this.voterModel.countDocuments(),
         this.voterModel.countDocuments({ isEnabled: true }),
         this.voterModel.countDocuments({ hasVotedArea: true }),
-        this.voterModel.countDocuments({ hasVotedPresidency: true }),
       ])
 
     // UC-02: Quórum de presidencia — nulidad si votaron <= mitad del padrón
-    const presidencyQuorumVoid = totalVotedPresidency <= Math.floor(totalPadron / 2)
+    const presidencyQuorumVoid = totalVoted <= Math.floor(totalPadron / 2)
 
     const positionEntries = await Promise.all(
       allPositions.map(async (position) => {
@@ -294,11 +295,11 @@ export class AdminService {
             candidates,
             round1: r1Result,
             round2: r2Result,
-            ...(isPresidency && totalVotedPresidency > 0 && {
+            ...(isPresidency && totalVoted > 0 && {
               quorumVoid: presidencyQuorumVoid,
               quorumDetail: {
                 totalPadron,
-                votosEmitidos: totalVotedPresidency,
+                votosEmitidos: totalVoted,
                 umbral: Math.floor(totalPadron / 2) + 1,
               },
             }),
@@ -315,8 +316,7 @@ export class AdminService {
       participation: {
         totalPadron,
         eligible: totalEligible,
-        votedAreas: totalVotedAreas,
-        votedPresidency: totalVotedPresidency,
+        voted: totalVoted,
       },
       positions: results,
     }
