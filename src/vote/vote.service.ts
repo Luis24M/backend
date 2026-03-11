@@ -65,7 +65,7 @@ export class VoteService {
           )
         }
 
-        await this.voteModel.create(voteEntries, { session })
+        await this.voteModel.create(voteEntries, { session, ordered: true })
       })
     } finally {
       await session.endSession()
@@ -140,7 +140,7 @@ export class VoteService {
           )
         }
 
-        await this.voteModel.create([voteEntry], { session })
+        await this.voteModel.create([voteEntry], { session, ordered: true })
       })
     } finally {
       await session.endSession()
