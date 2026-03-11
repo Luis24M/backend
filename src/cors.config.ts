@@ -2,6 +2,7 @@ export function buildCorsOptions() {
   const defaultOrigins = [
     'https://frontend-seven-rosy-75.vercel.app',
     'http://localhost:5173',
+    'http://localhost:5174',
   ]
 
   const envOrigins = (process.env.CORS_ORIGINS || '')
