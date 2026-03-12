@@ -36,11 +36,13 @@ export class VoteService {
       throw new ForbiddenException('La votación no está habilitada.')
     }
 
-    const areaPosition = voter.area as Position
-
     const voteEntries = await this.resolveVoteEntries(
       {
-        [areaPosition]: dto.areaCandidateId,
+        [Position.PMO]: dto.pmoCandidateId,
+        [Position.GTH]: dto.gthCandidateId,
+        [Position.MKT]: dto.mktCandidateId,
+        [Position.LTK_FNZ]: dto.ltkFnzCandidateId,
+        [Position.TI]: dto.tiCandidateId,
         [Position.PRESIDENCIA]: dto.presidencyCandidateId,
       },
       1,
@@ -86,15 +88,6 @@ export class VoteService {
     if (posState !== PositionStatus.RUNOFF) {
       throw new ForbiddenException(
         `No hay segunda vuelta activa para ${dto.position}.`,
-      )
-    }
-
-    const isPresidency = dto.position === Position.PRESIDENCIA
-
-    // Solo puede votar runoff de su propia área
-    if (!isPresidency && voter.area !== dto.position) {
-      throw new ForbiddenException(
-        `No puedes votar en la segunda vuelta de ${dto.position}. Tu área es ${voter.area}.`,
       )
     }
 

@@ -1,14 +1,29 @@
 import { IsString, IsNotEmpty } from 'class-validator'
 
 /**
- * Boleta unificada: el votante envía su voto de área y presidencia en una sola petición.
- * areaCandidateId:       ObjectId del candidato de su área | 'BLANK' | 'NULL'
- * presidencyCandidateId: ObjectId del candidato a presidente | 'BLANK' | 'NULL'
+ * Boleta unificada: el votante envía su voto para los 6 cargos en una sola petición.
+ * Cada campo acepta: ObjectId del candidato | 'BLANK' | 'NULL'
  */
 export class SubmitBallotDto {
   @IsString()
   @IsNotEmpty()
-  areaCandidateId: string
+  pmoCandidateId: string
+
+  @IsString()
+  @IsNotEmpty()
+  gthCandidateId: string
+
+  @IsString()
+  @IsNotEmpty()
+  mktCandidateId: string
+
+  @IsString()
+  @IsNotEmpty()
+  ltkFnzCandidateId: string
+
+  @IsString()
+  @IsNotEmpty()
+  tiCandidateId: string
 
   @IsString()
   @IsNotEmpty()
