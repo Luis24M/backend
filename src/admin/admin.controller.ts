@@ -68,6 +68,11 @@ export class AdminController {
     return this.adminService.enableAllVoters()
   }
 
+  @Post('voters/disable-all')
+  disableAllVoters() {
+    return this.adminService.disableAllVoters()
+  }
+
   @Post('voters/import')
   @UseInterceptors(
     FileInterceptor('file', {

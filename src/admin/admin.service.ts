@@ -141,6 +141,18 @@ export class AdminService {
     }
   }
 
+  async disableAllVoters() {
+    const result = await this.voterModel.updateMany(
+      { isEnabled: true },
+      { $set: { isEnabled: false } },
+    )
+
+    return {
+      disabled: result.modifiedCount,
+      message: 'Asistencia limpiada correctamente.',
+    }
+  }
+
   async importVoters(buffer: Buffer, overwrite = false) {
     let workbook: XLSX.WorkBook
     try {
@@ -262,6 +274,18 @@ export class AdminService {
         this.voterModel.countDocuments({ hasVotedArea: true }),
       ])
 
+    // Estadísticas por área
+    const areas = ['PMO', 'GTH', 'MKT', 'LTK_FNZ', 'TI']
+    const areaParticipation = await Promise.all(
+      areas.map(async (area) => {
+        const [total, voted] = await Promise.all([
+          this.voterModel.countDocuments({ area }),
+          this.voterModel.countDocuments({ area, hasVotedArea: true }),
+        ])
+        return { area, total, voted }
+      }),
+    )
+
     // UC-02: Quórum de presidencia — nulidad si votaron <= mitad del padrón
     const presidencyQuorumVoid = totalVoted <= Math.floor(totalPadron / 2)
 
@@ -317,6 +341,7 @@ export class AdminService {
         totalPadron,
         eligible: totalEligible,
         voted: totalVoted,
+        byArea: areaParticipation,
       },
       positions: results,
     }
